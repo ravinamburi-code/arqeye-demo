@@ -1,0 +1,2698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArqEye - Enterprise Architecture Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            900: '#1a1f3a',
+                            700: '#2d3561',
+                            500: '#4a5899',
+                            300: '#7b8fd9',
+                        },
+                        accent: {
+                            500: '#00d4aa',
+                            300: '#5ae4c8',
+                        },
+                        gray: {
+                            900: '#0f1115',
+                            800: '#1a1d24',
+                            700: '#2d3139',
+                            600: '#464a54',
+                            500: '#6c717d',
+                            300: '#b4b8c3',
+                            100: '#e8eaed',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f1115;
+            color: #e8eaed;
+        }
+        
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .arqeye-glow {
+            box-shadow: 0 0 20px rgba(0, 212, 170, 0.3);
+        }
+        
+        .transcript-line {
+            transition: all 0.2s;
+        }
+        
+        .transcript-line:hover {
+            background: rgba(74, 88, 153, 0.1);
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #1a1d24 0%, #2d3139 100%);
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: #1a1d24;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #464a54;
+            border-radius: 4px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: #6c717d;
+        }
+        
+        .meeting-card {
+            transition: all 0.3s;
+            border: 1px solid #2d3139;
+        }
+        
+        .meeting-card:hover {
+            border-color: #464a54;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .decision-card {
+            background: #1a1d24;
+            border: 1px solid #2d3139;
+            transition: all 0.3s;
+        }
+        
+        .decision-card:hover {
+            border-color: #4a5899;
+        }
+        
+        .confidence-badge {
+            background: linear-gradient(135deg, #00d4aa 0%, #5ae4c8 100%);
+            color: #0f1115;
+            font-weight: 600;
+        }
+        
+        .mode-card {
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid #2d3139;
+        }
+        
+        .mode-card:hover {
+            border-color: #4a5899;
+        }
+        
+        .mode-card.active {
+            border-color: #00d4aa;
+            background: rgba(0, 212, 170, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-900">
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Icons (simplified SVG components)
+        const Icons = {
+            Dashboard: () => (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+            ),
+            Calendar: () => (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            ),
+            Check: () => (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+            Grid: () => (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+            ),
+            Chart: () => (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+            ),
+            Settings: () => (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            ),
+            Search: () => (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            ),
+            Bell: () => (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+            ),
+            ChevronLeft: () => (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+            ),
+            Users: () => (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+            ),
+            Download: () => (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+            ),
+            Filter: () => (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+            ),
+            Robot: () => (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+            ),
+            Category: () => (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+            ),
+            Network: () => (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                </svg>
+            ),
+            Shield: () => (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+            )
+        };
+
+        // Sidebar Component
+        function Sidebar({ currentPage, setCurrentPage, sidebarOpen }) {
+            const navigation = [
+                { name: 'Dashboard', page: 'dashboard', icon: Icons.Dashboard },
+                { name: 'Meetings', page: 'meetings', icon: Icons.Calendar },
+                { name: 'Decisions', page: 'decisions', icon: Icons.Check },
+                { name: 'Categories', page: 'categories', icon: Icons.Category },
+                { name: 'Applications', page: 'applications', icon: Icons.Grid },
+                { name: 'Interfaces', page: 'interfaces', icon: Icons.Network },
+                { name: 'Landscape', page: 'landscape', icon: Icons.Network },
+                { name: 'Audit Trail', page: 'audit', icon: Icons.Shield },
+                { name: 'Analytics', page: 'analytics', icon: Icons.Chart },
+                { name: 'Settings', page: 'settings', icon: Icons.Settings },
+            ];
+
+            return (
+                <div className={`fixed inset-y-0 z-50 flex flex-col bg-gray-900 transition-all duration-300 ${sidebarOpen ? 'w-60' : 'w-20'}`}>
+                    <div className="flex h-16 items-center justify-between px-6">
+                        {sidebarOpen && (
+                            <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-lg bg-accent-500"></div>
+                                <span className="text-xl font-bold text-white">ArqEye</span>
+                            </div>
+                        )}
+                    </div>
+                    <nav className="flex-1 px-3 py-4">
+                        <ul className="space-y-1">
+                            {navigation.map((item) => {
+                                const Icon = item.icon;
+                                const isActive = currentPage === item.page;
+                                return (
+                                    <li key={item.name}>
+                                        <button
+                                            onClick={() => setCurrentPage(item.page)}
+                                            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                                                isActive
+                                                    ? 'bg-primary-500 text-white'
+                                                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                            }`}
+                                        >
+                                            <Icon />
+                                            {sidebarOpen && <span>{item.name}</span>}
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </nav>
+                </div>
+            );
+        }
+
+        // TopBar Component
+        function TopBar() {
+            return (
+                <>
+                    {/* Demo Mode Banner */}
+                    <div className="sticky top-0 z-50 bg-accent-500/10 border-b border-accent-500/20 px-8 py-2">
+                        <div className="flex items-center justify-center gap-2">
+                            <span className="inline-flex items-center rounded-full bg-accent-500 px-3 py-1 text-xs font-semibold text-gray-900">
+                                DEMO MODE
+                            </span>
+                            <span className="text-sm text-accent-300">
+                                Viewing sample conversation data for demonstration purposes
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-gray-700 bg-gray-800 px-6">
+                    <div className="flex flex-1 gap-4">
+                        <div className="relative flex-1 max-w-lg">
+                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <Icons.Search />
+                            </div>
+                            <input
+                                type="text"
+                                className="block w-full rounded-lg border border-gray-600 bg-gray-700 py-2 pl-10 pr-3 text-sm text-white placeholder-gray-400 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+                                placeholder="Search meetings, decisions, applications..."
+                            />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button className="relative rounded-lg p-2 text-gray-400 hover:bg-gray-700 hover:text-white">
+                            <Icons.Bell />
+                            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent-500"></span>
+                        </button>
+                        <div className="h-8 w-px bg-gray-700"></div>
+                        <button className="flex items-center gap-2 rounded-lg hover:bg-gray-700 px-2 py-1">
+                            <div className="h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-semibold text-sm">
+                                SC
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                </>
+            );
+        }
+
+        // Dashboard Page
+        function Dashboard() {
+            const stats = [
+                { name: 'Meetings Attended', value: '47', change: '+12%', positive: true, icon: Icons.Calendar },
+                { name: 'ARQEYE Responses', value: '128', change: '+8%', positive: true, icon: Icons.Robot },
+                { name: 'Decisions Tracked', value: '34', change: 'No change', neutral: true, icon: Icons.Check },
+                { name: 'Average Confidence', value: '87%', change: '+3%', positive: true, icon: Icons.Chart },
+            ];
+
+            return (
+                <div className="space-y-8">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+                        <p className="mt-1 text-gray-400">Welcome back! Here's what's happening with ARQEYE.</p>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        {stats.map((stat) => {
+                            const Icon = stat.icon;
+                            return (
+                                <div key={stat.name} className="stat-card rounded-lg border border-gray-700 p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm font-medium text-gray-400">{stat.name}</div>
+                                        <div className="text-gray-500">
+                                            <Icon />
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 text-3xl font-bold text-white">{stat.value}</div>
+                                    <div className={`mt-1 text-xs ${stat.positive ? 'text-green-400' : stat.neutral ? 'text-gray-400' : 'text-red-400'}`}>
+                                        {stat.change} vs last month
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Recent Meetings */}
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-semibold text-white">Recent Meetings</h2>
+                            <button className="text-accent-500 hover:text-accent-300 text-sm font-medium">
+                                View all →
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {[
+                                {
+                                    title: 'Q4 Architecture Review',
+                                    date: 'Dec 15, 2025 • 2:00 PM',
+                                    duration: '1h 23m',
+                                    participants: 8,
+                                    arqeyeResponses: 3,
+                                    summary: 'ARQEYE suggested microservices architecture for payment processing. Team approved with 87% confidence.'
+                                },
+                                {
+                                    title: 'Cloud Migration Planning',
+                                    date: 'Dec 14, 2025 • 10:30 AM',
+                                    duration: '2h 15m',
+                                    participants: 12,
+                                    arqeyeResponses: 7,
+                                    summary: 'Discussed AWS vs Azure. ARQEYE recommended hybrid approach based on existing infrastructure.'
+                                }
+                            ].map((meeting, idx) => (
+                                <div key={idx} className="meeting-card rounded-lg bg-gray-800 p-6 cursor-pointer">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                            <h3 className="text-lg font-semibold text-white">{meeting.title}</h3>
+                                            <p className="mt-1 text-sm text-gray-400">{meeting.date} • {meeting.duration} • {meeting.participants} participants</p>
+                                        </div>
+                                        <span className="inline-flex items-center rounded-full bg-green-500/10 px-3 py-1 text-xs font-medium text-green-400">
+                                            Completed
+                                        </span>
+                                    </div>
+                                    <div className="mt-4 flex items-center gap-4 text-sm text-gray-400">
+                                        <div className="flex items-center gap-1">
+                                            <Icons.Robot />
+                                            <span>{meeting.arqeyeResponses} ARQEYE responses</span>
+                                        </div>
+                                    </div>
+                                    <p className="mt-3 text-sm text-gray-300">{meeting.summary}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Recent Decisions */}
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-semibold text-white">Recent Decisions</h2>
+                            <button className="text-accent-500 hover:text-accent-300 text-sm font-medium">
+                                View all →
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            {[
+                                {
+                                    title: 'Adopt Modular Monolith Architecture',
+                                    status: 'approved',
+                                    confidence: 87,
+                                    date: 'Dec 15, 2025',
+                                    owner: 'Sarah Chen',
+                                    meeting: 'Q4 Architecture Review'
+                                },
+                                {
+                                    title: 'Implement Vertical Scaling Strategy',
+                                    status: 'approved',
+                                    confidence: 85,
+                                    date: 'Dec 15, 2025',
+                                    owner: 'Marcus Johnson',
+                                    meeting: 'Q4 Architecture Review'
+                                },
+                                {
+                                    title: 'Migrate Authentication to OAuth 2.0',
+                                    status: 'approved',
+                                    confidence: 91,
+                                    date: 'Dec 12, 2025',
+                                    owner: 'David Lee',
+                                    meeting: 'Security Review'
+                                },
+                                {
+                                    title: 'Adopt GraphQL for API Layer',
+                                    status: 'rejected',
+                                    confidence: 65,
+                                    date: 'Dec 10, 2025',
+                                    owner: 'Sarah Chen',
+                                    meeting: 'Tech Stack Discussion'
+                                }
+                            ].map((decision, idx) => (
+                                <div key={idx} className="decision-card rounded-lg p-5 border-l-4 border-accent-500">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <h3 className="text-md font-semibold text-white flex-1">{decision.title}</h3>
+                                        <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-medium capitalize ml-2 ${
+                                            decision.status === 'approved' 
+                                                ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                                : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                        }`}>
+                                            {decision.status}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="confidence-badge rounded-full px-2 py-0.5 text-xs">
+                                            {decision.confidence}% confidence
+                                        </span>
+                                        <span className="text-xs text-gray-500">•</span>
+                                        <span className="text-xs text-gray-400">{decision.date}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-500">Owner: <span className="text-white">{decision.owner}</span></span>
+                                        <span className="text-gray-500">{decision.meeting}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Decisions Needing Approval */}
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-semibold text-white">Decisions Needing Approval</h2>
+                            <span className="inline-flex items-center rounded-full bg-yellow-500/20 px-3 py-1 text-xs font-semibold text-yellow-400">
+                                3 pending
+                            </span>
+                        </div>
+
+                        <div className="space-y-3">
+                            {[
+                                {
+                                    title: 'Migrate to AWS Cloud Infrastructure',
+                                    confidence: 79,
+                                    owner: 'Jennifer Williams',
+                                    meeting: 'Infrastructure Planning',
+                                    daysAgo: 2,
+                                    urgency: 'high'
+                                },
+                                {
+                                    title: 'Implement Zero-Trust Security Model',
+                                    confidence: 88,
+                                    owner: 'David Lee',
+                                    meeting: 'Security Review',
+                                    daysAgo: 5,
+                                    urgency: 'medium'
+                                },
+                                {
+                                    title: 'Adopt Event-Driven Architecture for Notifications',
+                                    confidence: 73,
+                                    owner: 'Marcus Johnson',
+                                    meeting: 'Tech Stack Discussion',
+                                    daysAgo: 7,
+                                    urgency: 'low'
+                                }
+                            ].map((decision, idx) => (
+                                <div key={idx} className="rounded-lg bg-gray-800 border border-gray-700 p-4 hover:border-accent-500/30 transition-colors">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="text-md font-semibold text-white">{decision.title}</h3>
+                                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                                    decision.urgency === 'high' 
+                                                        ? 'bg-red-500/20 text-red-400'
+                                                        : decision.urgency === 'medium'
+                                                            ? 'bg-yellow-500/20 text-yellow-400'
+                                                            : 'bg-blue-500/20 text-blue-400'
+                                                }`}>
+                                                    {decision.urgency.toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-sm text-gray-400 mt-2">
+                                                <span>Owner: <span className="text-white">{decision.owner}</span></span>
+                                                <span>•</span>
+                                                <span>{decision.meeting}</span>
+                                                <span>•</span>
+                                                <span>{decision.daysAgo} days ago</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-2 ml-4">
+                                            <span className="confidence-badge rounded-full px-2 py-0.5 text-xs">
+                                                {decision.confidence}% confidence
+                                            </span>
+                                            <button className="text-xs text-accent-500 hover:text-accent-300 font-medium">
+                                                Review →
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Team Overview */}
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-semibold text-white">Team Overview</h2>
+                            <button className="text-accent-500 hover:text-accent-300 text-sm font-medium">
+                                View all →
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            {[
+                                {
+                                    name: 'Sarah Chen',
+                                    role: 'Senior Architect',
+                                    meetings: 12,
+                                    contributions: 34,
+                                    trend: 'up'
+                                },
+                                {
+                                    name: 'Marcus Johnson',
+                                    role: 'Engineering Manager',
+                                    meetings: 10,
+                                    contributions: 28,
+                                    trend: 'up'
+                                },
+                                {
+                                    name: 'ARQEYE',
+                                    role: 'AI Architecture Assistant',
+                                    meetings: 8,
+                                    contributions: 21,
+                                    trend: 'up',
+                                    isBot: true
+                                },
+                                {
+                                    name: 'David Lee',
+                                    role: 'Lead Developer',
+                                    meetings: 8,
+                                    contributions: 19,
+                                    trend: 'stable'
+                                },
+                                {
+                                    name: 'Jennifer Williams',
+                                    role: 'Infrastructure Lead',
+                                    meetings: 7,
+                                    contributions: 16,
+                                    trend: 'up'
+                                },
+                                {
+                                    name: 'Alex Kumar',
+                                    role: 'Security Architect',
+                                    meetings: 5,
+                                    contributions: 11,
+                                    trend: 'down'
+                                }
+                            ].map((member, idx) => (
+                                <div key={idx} className="rounded-lg bg-gray-800 border border-gray-700 p-4 hover:border-gray-600 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`h-12 w-12 rounded-full flex items-center justify-center text-lg font-semibold ${
+                                            member.isBot 
+                                                ? 'bg-accent-500 text-gray-900' 
+                                                : 'bg-primary-500 text-white'
+                                        }`}>
+                                            {member.isBot ? '🤖' : member.name.split(' ').map(n => n[0]).join('')}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="text-sm font-semibold text-white">{member.name}</h4>
+                                                {member.isBot && (
+                                                    <span className="inline-flex items-center rounded-full bg-accent-500/20 border border-accent-500/40 px-1.5 py-0.5 text-xs font-semibold text-accent-400">
+                                                        AI
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-400">{member.role}</p>
+                                        </div>
+                                        <div className={`text-lg ${
+                                            member.trend === 'up' 
+                                                ? 'text-green-400' 
+                                                : member.trend === 'down' 
+                                                    ? 'text-red-400' 
+                                                    : 'text-gray-400'
+                                        }`}>
+                                            {member.trend === 'up' ? '↑' : member.trend === 'down' ? '↓' : '→'}
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-700">
+                                        <div>
+                                            <div className="text-xs text-gray-500">Meetings</div>
+                                            <div className="text-lg font-bold text-white">{member.meetings}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-gray-500">Contributions</div>
+                                            <div className="text-lg font-bold text-accent-500">{member.contributions}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Meetings Page
+        function Meetings({ setCurrentPage, setSelectedMeeting }) {
+            const meetings = [
+                {
+                    id: 1,
+                    title: 'Q4 Architecture Review',
+                    date: 'Dec 15, 2025',
+                    time: '2:00 PM',
+                    duration: '1h 23m',
+                    participants: 8,
+                    transcriptLines: 142,
+                    arqeyeResponses: 3,
+                    status: 'completed',
+                    summary: 'ARQEYE suggested microservices architecture for payment processing. Team approved with 87% confidence.'
+                },
+                {
+                    id: 2,
+                    title: 'Cloud Migration Planning',
+                    date: 'Dec 14, 2025',
+                    time: '10:30 AM',
+                    duration: '2h 15m',
+                    participants: 12,
+                    transcriptLines: 287,
+                    arqeyeResponses: 7,
+                    status: 'completed',
+                    summary: 'Discussed AWS vs Azure. ARQEYE recommended hybrid approach based on existing infrastructure.'
+                },
+                {
+                    id: 3,
+                    title: 'Security Review - API Gateway',
+                    date: 'Dec 13, 2025',
+                    time: '3:00 PM',
+                    duration: '45m',
+                    participants: 5,
+                    transcriptLines: 89,
+                    arqeyeResponses: 2,
+                    status: 'completed',
+                    summary: 'ARQEYE flagged potential authentication gaps. Team agreed to implement OAuth 2.0.'
+                },
+                {
+                    id: 4,
+                    title: 'Microservices Strategy',
+                    date: 'Dec 12, 2025',
+                    time: '11:00 AM',
+                    duration: '1h 45m',
+                    participants: 10,
+                    transcriptLines: 234,
+                    arqeyeResponses: 5,
+                    status: 'completed',
+                    summary: 'Deep dive into service boundaries and deployment strategies. ARQEYE provided service sizing recommendations.'
+                }
+            ];
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-white">Meetings</h1>
+                            <p className="mt-1 text-gray-400">All Teams meetings attended by ARQEYE</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button className="flex items-center gap-2 rounded-lg bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 border border-gray-600">
+                                <Icons.Filter />
+                                Filter
+                            </button>
+                            <button className="flex items-center gap-2 rounded-lg bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 border border-gray-600">
+                                <Icons.Download />
+                                Export
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Filters */}
+                    <div className="flex items-center gap-4 bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                            <option>All Status</option>
+                            <option>Completed</option>
+                            <option>In Progress</option>
+                            <option>Scheduled</option>
+                        </select>
+                        <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                            <option>Last 30 Days</option>
+                            <option>Last 7 Days</option>
+                            <option>Last 90 Days</option>
+                            <option>Custom Range</option>
+                        </select>
+                        <div className="flex items-center gap-2 ml-auto">
+                            <span className="text-sm text-gray-400">Sort by:</span>
+                            <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                                <option>Most Recent</option>
+                                <option>Oldest First</option>
+                                <option>Most Participants</option>
+                                <option>Longest Duration</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Meeting Cards */}
+                    <div className="grid gap-4">
+                        {meetings.map((meeting) => (
+                            <div
+                                key={meeting.id}
+                                onClick={() => {
+                                    setSelectedMeeting(meeting);
+                                    setCurrentPage('meeting-detail');
+                                }}
+                                className="meeting-card rounded-lg bg-gray-800 p-6 cursor-pointer"
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-semibold text-white">{meeting.title}</h3>
+                                        <p className="mt-1 text-sm text-gray-400">
+                                            {meeting.date} • {meeting.time} • {meeting.duration}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="inline-flex items-center rounded-full bg-accent-500/20 border border-accent-500/30 px-2 py-1 text-xs font-semibold text-accent-400">
+                                            DEMO
+                                        </span>
+                                        <span className="inline-flex items-center rounded-full bg-green-500/10 px-3 py-1 text-xs font-medium text-green-400">
+                                            {meeting.status}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+                                    <div>
+                                        <span className="text-gray-500">Participants</span>
+                                        <p className="mt-1 font-semibold text-white">{meeting.participants}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">Transcript Lines</span>
+                                        <p className="mt-1 font-semibold text-white">{meeting.transcriptLines}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">ARQEYE Responses</span>
+                                        <p className="mt-1 font-semibold text-accent-500">{meeting.arqeyeResponses}</p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 pt-4 border-t border-gray-700">
+                                    <p className="text-sm text-gray-300">{meeting.summary}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // Meeting Detail Page
+        function MeetingDetail({ meeting, setCurrentPage }) {
+            const [activeTab, setActiveTab] = useState('transcript');
+
+            const transcriptLines = [
+                {
+                    speaker: 'Sarah Chen',
+                    time: '14:23:15',
+                    content: 'Should we use microservices for the payment system? We currently have a monolith.',
+                    isArqEye: false
+                },
+                {
+                    speaker: 'ARQEYE',
+                    time: '14:23:47',
+                    content: 'Based on your current monolith (PaymentCore) and team size (8 engineers), microservices would add operational complexity. I recommend considering a modular monolith approach first.',
+                    isArqEye: true,
+                    isDecision: true,
+                    confidence: 87,
+                    reasoning: 'Team size insufficient for managing multiple services. Current monolith already modular based on codebase analysis. No deployment pain points identified in recent retrospectives.',
+                    sources: ['application_inventory', 'team_size', 'previous_migration_failure_2023']
+                },
+                {
+                    speaker: 'Marcus Johnson',
+                    time: '14:24:32',
+                    content: 'That makes sense. Can you elaborate on the modular monolith approach?',
+                    isArqEye: false
+                },
+                {
+                    speaker: 'ARQEYE',
+                    time: '14:24:55',
+                    content: 'A modular monolith maintains clear service boundaries within a single deployable unit. This gives you the organizational benefits of microservices while avoiding distributed system complexity.',
+                    isArqEye: true,
+                    confidence: 92,
+                    reasoning: 'Pattern recommended by Martin Fowler for teams transitioning from monoliths. Lower operational overhead while maintaining modularity.',
+                    sources: ['architecture_patterns', 'industry_best_practices']
+                },
+                {
+                    speaker: 'Sarah Chen',
+                    time: '14:25:30',
+                    content: 'What about our scaling requirements for Black Friday?',
+                    isArqEye: false
+                },
+                {
+                    speaker: 'ARQEYE',
+                    time: '14:26:05',
+                    content: 'Your Black Friday traffic analysis shows 10x normal load for 3-hour windows. Vertical scaling with read replicas can handle this. PaymentCore already supports horizontal read scaling.',
+                    isArqEye: true,
+                    confidence: 85,
+                    reasoning: 'Traffic patterns show predictable spikes. Current infrastructure supports read scaling. Write load remains manageable.',
+                    sources: ['traffic_analysis_2024', 'infrastructure_capacity']
+                }
+            ];
+
+            return (
+                <div className="space-y-6">
+                    {/* Header */}
+                    <div>
+                        <button
+                            onClick={() => setCurrentPage('meetings')}
+                            className="flex items-center gap-2 text-accent-500 hover:text-accent-300 mb-4"
+                        >
+                            <Icons.ChevronLeft />
+                            Back to Meetings
+                        </button>
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold text-white">{meeting.title}</h1>
+                                <p className="mt-1 text-gray-400">{meeting.date} • {meeting.time} • {meeting.duration}</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="inline-flex items-center rounded-full bg-accent-500/20 border border-accent-500/30 px-2 py-1 text-xs font-semibold text-accent-400">
+                                    DEMO
+                                </span>
+                                <span className="inline-flex items-center rounded-full bg-green-500/10 px-3 py-1 text-sm font-medium text-green-400">
+                                    Completed
+                                </span>
+                                <button className="flex items-center gap-2 rounded-lg bg-accent-500 px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-accent-300">
+                                    <Icons.Download />
+                                    Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-4 gap-4">
+                        <div className="rounded-lg bg-gray-800 border border-gray-700 p-4">
+                            <div className="text-sm text-gray-400">Participants</div>
+                            <div className="mt-1 text-2xl font-bold text-white">{meeting.participants}</div>
+                        </div>
+                        <div className="rounded-lg bg-gray-800 border border-gray-700 p-4">
+                            <div className="text-sm text-gray-400">Duration</div>
+                            <div className="mt-1 text-2xl font-bold text-white">{meeting.duration}</div>
+                        </div>
+                        <div className="rounded-lg bg-gray-800 border border-gray-700 p-4">
+                            <div className="text-sm text-gray-400">Transcript Lines</div>
+                            <div className="mt-1 text-2xl font-bold text-white">{meeting.transcriptLines}</div>
+                        </div>
+                        <div className="rounded-lg bg-gray-800 border border-gray-700 p-4">
+                            <div className="text-sm text-gray-400">ARQEYE Responses</div>
+                            <div className="mt-1 text-2xl font-bold text-accent-500">{meeting.arqeyeResponses}</div>
+                        </div>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="border-b border-gray-700">
+                        <nav className="flex gap-8">
+                            {['transcript', 'summary', 'decisions', 'participants'].map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`border-b-2 pb-4 text-sm font-semibold capitalize ${
+                                        activeTab === tab
+                                            ? 'border-accent-500 text-accent-500'
+                                            : 'border-transparent text-gray-400 hover:text-white'
+                                    }`}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </nav>
+                    </div>
+
+                    {/* Tab Content */}
+                    {activeTab === 'transcript' && (
+                        <div className="grid grid-cols-3 gap-6">
+                            {/* Left Column: Transcript */}
+                            <div className="col-span-2">
+                                <div className="rounded-lg bg-gray-800 border border-gray-700">
+                                    <div className="border-b border-gray-700 p-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <input
+                                                type="text"
+                                                placeholder="Search in transcript..."
+                                                className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white placeholder-gray-400 focus:border-accent-500 focus:outline-none w-80"
+                                            />
+                                            <button className="text-sm text-accent-500 hover:text-accent-300">
+                                                Show only ARQEYE responses
+                                            </button>
+                                        </div>
+                                        <div className="text-sm text-gray-400">Time: 14:23</div>
+                                    </div>
+                                    
+                                    <div className="p-6 space-y-6 max-h-[600px] overflow-y-auto scrollbar-thin">
+                                {transcriptLines.map((line, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={`transcript-line rounded-lg p-4 transition-all ${
+                                            line.isDecision
+                                                ? 'bg-yellow-500/10 border-l-4 border-yellow-500 shadow-lg'
+                                                : line.isArqEye 
+                                                    ? 'bg-accent-500/10 border-l-4 border-accent-500 arqeye-glow' 
+                                                    : 'hover:bg-gray-700/30 border-l-4 border-transparent'
+                                        }`}
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold ${
+                                                line.isArqEye ? 'bg-accent-500 text-gray-900' : 'bg-primary-500 text-white'
+                                            }`}>
+                                                {line.isArqEye ? '🤖' : line.speaker.split(' ').map(n => n[0]).join('')}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="font-semibold text-white">{line.speaker}</span>
+                                                    <span className="text-sm text-gray-500">{line.time}</span>
+                                                    {line.isDecision && (
+                                                        <span className="inline-flex items-center rounded-full bg-yellow-500/20 border border-yellow-500/40 px-2 py-0.5 text-xs font-semibold text-yellow-400">
+                                                            ⚡ DECISION MOMENT
+                                                        </span>
+                                                    )}
+                                                    {line.isArqEye && !line.isDecision && (
+                                                        <span className="inline-flex items-center rounded-full bg-accent-500/20 border border-accent-500/40 px-2 py-0.5 text-xs font-semibold text-accent-400">
+                                                            AI INTERVENTION
+                                                        </span>
+                                                    )}
+                                                    {line.isArqEye && line.confidence && (
+                                                        <span className="confidence-badge rounded-full px-2 py-0.5 text-xs ml-auto">
+                                                            {line.confidence}% confidence
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="mt-2 text-gray-300 leading-relaxed">{line.content}</p>
+                                                
+                                                {line.isArqEye && line.reasoning && (
+                                                    <div className="mt-4 space-y-3">
+                                                        <details className="group">
+                                                            <summary className="cursor-pointer text-sm font-medium text-accent-500 hover:text-accent-300 flex items-center gap-2">
+                                                                💡 View Reasoning
+                                                                <svg className="w-4 h-4 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                                </svg>
+                                                            </summary>
+                                                            <div className="mt-3 rounded-lg bg-gray-900/50 p-4 text-sm text-gray-300">
+                                                                {line.reasoning}
+                                                            </div>
+                                                        </details>
+                                                        {line.sources && (
+                                                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                                <span>📚 Sources:</span>
+                                                                {line.sources.map((source, i) => (
+                                                                    <span key={i} className="rounded bg-gray-700 px-2 py-1">
+                                                                        {source}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Structure Overlay Panel */}
+                    <div className="col-span-1">
+                        <div className="sticky top-24 space-y-4">
+                            {/* Topics Detected */}
+                            <div className="rounded-lg bg-gray-800 border border-gray-700 p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="text-2xl">📊</span>
+                                    <h3 className="text-lg font-semibold text-white">Topics Detected</h3>
+                                </div>
+                                <div className="space-y-2">
+                                    {[
+                                        'Microservices Architecture',
+                                        'Monolith Modernization',
+                                        'Team Capacity Planning',
+                                        'Scaling Strategy'
+                                    ].map((topic, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 text-sm">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-accent-500"></div>
+                                            <span className="text-gray-300">{topic}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Architectural Domains */}
+                            <div className="rounded-lg bg-gray-800 border border-gray-700 p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="text-2xl">🏗️</span>
+                                    <h3 className="text-lg font-semibold text-white">Architectural Domains</h3>
+                                </div>
+                                <div className="space-y-3">
+                                    {[
+                                        { name: 'Application Layer', discussed: true },
+                                        { name: 'Infrastructure', discussed: true },
+                                        { name: 'Deployment', discussed: true },
+                                        { name: 'Security', discussed: false },
+                                        { name: 'Data Architecture', discussed: false },
+                                        { name: 'Integration', discussed: false }
+                                    ].map((domain, idx) => (
+                                        <div key={idx} className="flex items-center gap-3 text-sm">
+                                            <div className={`flex-shrink-0 h-5 w-5 rounded-full flex items-center justify-center border-2 ${
+                                                domain.discussed 
+                                                    ? 'bg-accent-500 border-accent-500' 
+                                                    : 'border-gray-600'
+                                            }`}>
+                                                {domain.discussed && (
+                                                    <svg className="w-3 h-3 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <span className={domain.discussed ? 'text-white font-medium' : 'text-gray-500'}>
+                                                {domain.name}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Conversation Intent */}
+                            <div className="rounded-lg bg-gray-800 border border-gray-700 p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="text-2xl">🎯</span>
+                                    <h3 className="text-lg font-semibold text-white">Conversation Intent</h3>
+                                </div>
+                                <div className="space-y-3">
+                                    <div>
+                                        <div className="text-xs text-gray-500 mb-1">Primary</div>
+                                        <div className="inline-flex items-center rounded-full bg-accent-500/20 border border-accent-500/40 px-3 py-1 text-sm font-semibold text-accent-400">
+                                            Decision-seeking
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-gray-500 mb-1">Secondary</div>
+                                        <div className="inline-flex items-center rounded-full bg-blue-500/20 border border-blue-500/40 px-3 py-1 text-sm font-semibold text-blue-400">
+                                            Risk assessment
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Risks Identified */}
+                            <div className="rounded-lg bg-gray-800 border border-gray-700 p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="text-2xl">⚠️</span>
+                                    <h3 className="text-lg font-semibold text-white">Risks Identified</h3>
+                                    <span className="ml-auto rounded-full bg-yellow-500/20 px-2 py-0.5 text-xs font-semibold text-yellow-400">
+                                        2 risks
+                                    </span>
+                                </div>
+                                <div className="space-y-3">
+                                    {[
+                                        { 
+                                            risk: 'Team size constraint',
+                                            severity: 'medium',
+                                            description: 'Team of 8 may struggle with microservices operational overhead'
+                                        },
+                                        { 
+                                            risk: 'Operational complexity',
+                                            severity: 'high',
+                                            description: 'Distributed system complexity without prior experience'
+                                        }
+                                    ].map((item, idx) => (
+                                        <div key={idx} className="rounded-lg bg-gray-900/50 p-3 border-l-2 border-yellow-500">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                                    item.severity === 'high' 
+                                                        ? 'bg-red-500/20 text-red-400' 
+                                                        : 'bg-yellow-500/20 text-yellow-400'
+                                                }`}>
+                                                    {item.severity.toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div className="text-sm font-medium text-white mb-1">{item.risk}</div>
+                                            <div className="text-xs text-gray-400">{item.description}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+                    {activeTab === 'summary' && (
+                        <div className="rounded-lg bg-gray-800 border border-gray-700 p-6">
+                            <h3 className="text-lg font-semibold text-white mb-4">📝 Meeting Summary</h3>
+                            <div className="space-y-6">
+                                <div>
+                                    <p className="text-gray-300 leading-relaxed">
+                                        This meeting focused on architecture decisions for the payment processing system. 
+                                        The team discussed whether to adopt microservices architecture given the upcoming 
+                                        Black Friday scaling requirements. ARQEYE provided data-driven recommendations based 
+                                        on team size, current infrastructure capabilities, and traffic analysis.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-md font-semibold text-white mb-3">🎯 Key Decisions</h4>
+                                    <ul className="space-y-2 text-gray-300">
+                                        <li className="flex items-start gap-2">
+                                            <span className="text-accent-500">•</span>
+                                            Adopt modular monolith approach instead of full microservices
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <span className="text-accent-500">•</span>
+                                            Implement vertical scaling with read replicas for Black Friday
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <span className="text-accent-500">•</span>
+                                            Maintain clear service boundaries within monolith
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-md font-semibold text-white mb-3">🤖 ARQEYE Contributions</h4>
+                                    <div className="space-y-3">
+                                        <div className="rounded-lg bg-accent-500/5 border border-accent-500/20 p-4">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="confidence-badge rounded-full px-2 py-0.5 text-xs">87% confidence</span>
+                                                <span className="text-sm text-gray-400">Modular Monolith Recommendation</span>
+                                            </div>
+                                            <p className="text-sm text-gray-300">
+                                                Recommended modular monolith based on team size analysis and infrastructure capabilities
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg bg-accent-500/5 border border-accent-500/20 p-4">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="confidence-badge rounded-full px-2 py-0.5 text-xs">92% confidence</span>
+                                                <span className="text-sm text-gray-400">Scaling Strategy</span>
+                                            </div>
+                                            <p className="text-sm text-gray-300">
+                                                Provided scaling strategy based on Black Friday traffic patterns from 2024
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'decisions' && (
+                        <div className="rounded-lg bg-gray-800 border border-gray-700 p-6">
+                            <h3 className="text-lg font-semibold text-white mb-4">📋 Decisions Made</h3>
+                            <div className="space-y-4">
+                                {[
+                                    {
+                                        decision: 'Adopt Modular Monolith Architecture',
+                                        status: 'approved',
+                                        confidence: 87,
+                                        rationale: 'Team size of 8 engineers insufficient for managing distributed microservices. Current monolith already has modular structure.',
+                                        owner: 'Sarah Chen',
+                                        timeline: 'Q1 2026',
+                                        impact: ['PaymentCore', 'Infrastructure']
+                                    },
+                                    {
+                                        decision: 'Implement Vertical Scaling for Black Friday',
+                                        status: 'approved',
+                                        confidence: 85,
+                                        rationale: 'Traffic analysis shows 10x normal load for 3-hour windows. Current infrastructure supports read scaling effectively.',
+                                        owner: 'Marcus Johnson',
+                                        timeline: 'Before November 2026',
+                                        impact: ['Infrastructure', 'Performance']
+                                    },
+                                    {
+                                        decision: 'Maintain Service Boundaries Within Monolith',
+                                        status: 'proposed',
+                                        confidence: 92,
+                                        rationale: 'Provides organizational benefits of microservices while avoiding operational complexity.',
+                                        owner: 'Sarah Chen',
+                                        timeline: 'Ongoing',
+                                        impact: ['Architecture', 'Development Process']
+                                    }
+                                ].map((item, idx) => (
+                                    <div key={idx} className="decision-card rounded-lg p-5 border-l-4 border-accent-500">
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="flex-1">
+                                                <h4 className="text-md font-semibold text-white">{item.decision}</h4>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-medium capitalize ${
+                                                        item.status === 'approved' 
+                                                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                                            : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                                    }`}>
+                                                        {item.status}
+                                                    </span>
+                                                    <span className="confidence-badge rounded-full px-2 py-0.5 text-xs">
+                                                        {item.confidence}% confidence
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <p className="text-sm text-gray-300 mb-3">{item.rationale}</p>
+                                        
+                                        <div className="grid grid-cols-3 gap-4 text-sm">
+                                            <div>
+                                                <span className="text-gray-500">Owner</span>
+                                                <p className="text-white font-medium">{item.owner}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-500">Timeline</span>
+                                                <p className="text-white font-medium">{item.timeline}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-500">Impact Areas</span>
+                                                <div className="flex gap-1 mt-1">
+                                                    {item.impact.map((area, i) => (
+                                                        <span key={i} className="inline-flex items-center rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300">
+                                                            {area}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'participants' && (
+                        <div className="rounded-lg bg-gray-800 border border-gray-700 p-6">
+                            <h3 className="text-lg font-semibold text-white mb-4">👥 Meeting Participants</h3>
+                            <div className="space-y-4">
+                                {[
+                                    {
+                                        name: 'Sarah Chen',
+                                        role: 'Senior Architect',
+                                        department: 'Engineering',
+                                        contributions: 5,
+                                        active: true
+                                    },
+                                    {
+                                        name: 'Marcus Johnson',
+                                        role: 'Engineering Manager',
+                                        department: 'Engineering',
+                                        contributions: 3,
+                                        active: true
+                                    },
+                                    {
+                                        name: 'ARQEYE',
+                                        role: 'AI Architecture Assistant',
+                                        department: 'ArqEye Platform',
+                                        contributions: 3,
+                                        active: true,
+                                        isBot: true
+                                    },
+                                    {
+                                        name: 'David Lee',
+                                        role: 'Lead Developer',
+                                        department: 'Engineering',
+                                        contributions: 2,
+                                        active: true
+                                    },
+                                    {
+                                        name: 'Jennifer Williams',
+                                        role: 'Infrastructure Lead',
+                                        department: 'Operations',
+                                        contributions: 4,
+                                        active: true
+                                    }
+                                ].map((participant, idx) => (
+                                    <div key={idx} className="flex items-center gap-4 p-4 rounded-lg bg-gray-900/50 hover:bg-gray-900/70 transition-colors">
+                                        <div className={`h-12 w-12 rounded-full flex items-center justify-center text-lg font-semibold ${
+                                            participant.isBot 
+                                                ? 'bg-accent-500 text-gray-900' 
+                                                : 'bg-primary-500 text-white'
+                                        }`}>
+                                            {participant.isBot ? '🤖' : participant.name.split(' ').map(n => n[0]).join('')}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="text-md font-semibold text-white">{participant.name}</h4>
+                                                {participant.isBot && (
+                                                    <span className="inline-flex items-center rounded-full bg-accent-500/20 border border-accent-500/40 px-2 py-0.5 text-xs font-semibold text-accent-400">
+                                                        AI ASSISTANT
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-gray-400">{participant.role} • {participant.department}</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-2xl font-bold text-accent-500">{participant.contributions}</div>
+                                            <div className="text-xs text-gray-500">contributions</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            <div className="mt-6 p-4 rounded-lg bg-gray-900/30 border border-gray-700">
+                                <h4 className="text-sm font-semibold text-white mb-3">📊 Participation Summary</h4>
+                                <div className="grid grid-cols-3 gap-4 text-sm">
+                                    <div>
+                                        <span className="text-gray-500">Total Participants</span>
+                                        <p className="text-xl font-bold text-white mt-1">5</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">Total Contributions</span>
+                                        <p className="text-xl font-bold text-white mt-1">17</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">ARQEYE Interventions</span>
+                                        <p className="text-xl font-bold text-accent-500 mt-1">3</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // ARQEYE Settings Page
+        function ArqEyeSettings() {
+            const [mode, setMode] = useState('advisor');
+            const [threshold, setThreshold] = useState(70);
+
+            const modes = [
+                {
+                    id: 'observer',
+                    name: 'Observer',
+                    description: 'Listen only, never speak. Build knowledge base silently.'
+                },
+                {
+                    id: 'advisor',
+                    name: 'Advisor',
+                    description: 'Speak when asked or when confusion is detected. Provide guidance when team needs help.',
+                    recommended: true
+                },
+                {
+                    id: 'participant',
+                    name: 'Participant',
+                    description: 'Actively contribute to discussions. Offer suggestions proactively when relevant.'
+                },
+                {
+                    id: 'facilitator',
+                    name: 'Facilitator',
+                    description: 'Lead discussions, ensure decisions are made, track action items, guide conversation.'
+                }
+            ];
+
+            return (
+                <div className="space-y-8">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">ARQEYE Configuration</h1>
+                        <p className="mt-1 text-gray-400">Control how ARQEYE behaves in meetings</p>
+                    </div>
+
+                    {/* Participation Mode */}
+                    <div className="rounded-lg bg-gray-800 border border-gray-700 p-6">
+                        <h2 className="text-lg font-semibold text-white mb-2">🤖 Participation Mode</h2>
+                        <p className="text-sm text-gray-400 mb-6">Choose how actively ARQEYE participates in meetings</p>
+                        
+                        <div className="grid gap-4">
+                            {modes.map((m) => (
+                                <div
+                                    key={m.id}
+                                    onClick={() => setMode(m.id)}
+                                    className={`mode-card rounded-lg p-4 ${mode === m.id ? 'active' : ''}`}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0 mt-1">
+                                            <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
+                                                mode === m.id ? 'border-accent-500' : 'border-gray-600'
+                                            }`}>
+                                                {mode === m.id && <div className="h-3 w-3 rounded-full bg-accent-500"></div>}
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-semibold text-white">{m.name}</span>
+                                                {m.recommended && (
+                                                    <span className="rounded-full bg-accent-500/10 px-2 py-0.5 text-xs font-medium text-accent-500">
+                                                        Recommended
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="mt-1 text-sm text-gray-400">{m.description}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Confidence Threshold */}
+                    <div className="rounded-lg bg-gray-800 border border-gray-700 p-6">
+                        <h2 className="text-lg font-semibold text-white mb-2">🎯 Confidence Threshold</h2>
+                        <p className="text-sm text-gray-400 mb-6">ARQEYE will only speak if confidence >= {threshold}%</p>
+                        
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-4">
+                                <span className="text-sm text-gray-400 w-12">Low</span>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={threshold}
+                                    onChange={(e) => setThreshold(parseInt(e.target.value))}
+                                    className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-accent-500"
+                                />
+                                <span className="text-sm text-gray-400 w-12 text-right">High</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-gray-500">
+                                <span>0%</span>
+                                <span className="text-2xl font-bold text-accent-500">{threshold}%</span>
+                                <span>100%</span>
+                            </div>
+                            <div className="rounded-lg bg-gray-900/50 p-4">
+                                <p className="text-sm text-gray-400">
+                                    💡 Higher threshold = fewer but more confident responses. Lower threshold = more suggestions but may include uncertain advice.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Meeting Types */}
+                    <div className="rounded-lg bg-gray-800 border border-gray-700 p-6">
+                        <h2 className="text-lg font-semibold text-white mb-2">📅 Enabled Meeting Types</h2>
+                        <p className="text-sm text-gray-400 mb-6">ARQEYE will only join these meeting types</p>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                            {[
+                                { name: 'Architecture Reviews', enabled: true },
+                                { name: 'Design Discussions', enabled: true },
+                                { name: 'Technical Debt Planning', enabled: true },
+                                { name: 'Sprint Planning', enabled: false },
+                                { name: 'Retrospectives', enabled: false },
+                                { name: 'Daily Standups', enabled: false },
+                                { name: 'Cloud Migration Planning', enabled: true },
+                                { name: 'Security Reviews', enabled: true }
+                            ].map((type, idx) => (
+                                <label key={idx} className="flex items-center gap-3 p-3 rounded-lg bg-gray-900/50 cursor-pointer hover:bg-gray-900">
+                                    <input
+                                        type="checkbox"
+                                        defaultChecked={type.enabled}
+                                        className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-accent-500 focus:ring-accent-500"
+                                    />
+                                    <span className="text-sm text-gray-300">{type.name}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Advanced Settings */}
+                    <div className="rounded-lg bg-gray-800 border border-gray-700 p-6">
+                        <h2 className="text-lg font-semibold text-white mb-2">⚙️ Advanced Settings</h2>
+                        <p className="text-sm text-gray-400 mb-6">Fine-tune ARQEYE behavior</p>
+                        
+                        <div className="space-y-4">
+                            {[
+                                { name: 'Auto-respond to direct questions', enabled: true },
+                                { name: 'Provide decision guidance', enabled: true },
+                                { name: 'Generate meeting summaries automatically', enabled: true },
+                                { name: 'Detect and flag architecture anti-patterns', enabled: true },
+                                { name: 'Interrupt when detecting critical issues', enabled: false },
+                                { name: 'Learn from feedback (improve over time)', enabled: true }
+                            ].map((setting, idx) => (
+                                <label key={idx} className="flex items-center justify-between p-3 rounded-lg bg-gray-900/50">
+                                    <span className="text-sm text-gray-300">{setting.name}</span>
+                                    <div className="relative inline-block w-12 h-6">
+                                        <input
+                                            type="checkbox"
+                                            defaultChecked={setting.enabled}
+                                            className="peer sr-only"
+                                        />
+                                        <div className="h-6 w-12 rounded-full bg-gray-700 peer-checked:bg-accent-500 transition-colors cursor-pointer"></div>
+                                        <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-6"></div>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Save Button */}
+                    <div className="flex items-center justify-end gap-3">
+                        <button className="rounded-lg border border-gray-600 bg-gray-800 px-6 py-2 text-sm font-semibold text-white hover:bg-gray-700">
+                            Reset to Defaults
+                        </button>
+                        <button className="rounded-lg bg-accent-500 px-6 py-2 text-sm font-semibold text-gray-900 hover:bg-accent-300">
+                            Save Settings
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // Decisions Page
+        function Decisions() {
+            const decisions = [
+                {
+                    id: 1,
+                    title: 'Adopt Microservices Architecture for Payment Processing',
+                    status: 'approved',
+                    date: 'Dec 15, 2025',
+                    confidence: 87,
+                    technologies: ['Kubernetes', 'Spring Boot', 'PostgreSQL'],
+                    stakeholders: ['Sarah Chen', 'Marcus Johnson'],
+                    summary: 'Decided to adopt microservices architecture for payment system to enable independent scaling and technology flexibility.'
+                },
+                {
+                    id: 2,
+                    title: 'Implement OAuth 2.0 for API Authentication',
+                    status: 'approved',
+                    date: 'Dec 13, 2025',
+                    confidence: 92,
+                    technologies: ['OAuth 2.0', 'JWT', 'Auth0'],
+                    stakeholders: ['Marcus Johnson', 'David Lee'],
+                    summary: 'Replace legacy authentication with OAuth 2.0 to improve security and enable third-party integrations.'
+                },
+                {
+                    id: 3,
+                    title: 'Migrate to AWS Cloud Infrastructure',
+                    status: 'proposed',
+                    date: 'Dec 14, 2025',
+                    confidence: 79,
+                    technologies: ['AWS', 'Terraform', 'Kubernetes'],
+                    stakeholders: ['Jennifer Williams', 'Sarah Chen'],
+                    summary: 'Proposal to migrate from on-premises infrastructure to AWS to reduce operational overhead and improve scalability.'
+                },
+                {
+                    id: 4,
+                    title: 'Adopt GraphQL for Frontend API Layer',
+                    status: 'rejected',
+                    date: 'Dec 10, 2025',
+                    confidence: 65,
+                    technologies: ['GraphQL', 'Apollo', 'React'],
+                    stakeholders: ['David Lee'],
+                    summary: 'Rejected due to team unfamiliarity and existing REST API investment. Will revisit in Q2 2026.'
+                }
+            ];
+
+            const getStatusColor = (status) => {
+                const colors = {
+                    approved: 'bg-green-500/10 text-green-400 border-green-500/20',
+                    proposed: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                    implemented: 'bg-accent-500/10 text-accent-500 border-accent-500/20',
+                    rejected: 'bg-red-500/10 text-red-400 border-red-500/20'
+                };
+                return colors[status] || colors.proposed;
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-white">Architecture Decisions</h1>
+                            <p className="mt-1 text-gray-400">Track and document all architecture decisions</p>
+                        </div>
+                        <button className="rounded-lg bg-accent-500 px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-accent-300">
+                            + Log New Decision
+                        </button>
+                    </div>
+
+                    {/* Filters */}
+                    <div className="flex items-center gap-4">
+                        <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                            <option>All Status</option>
+                            <option>Proposed</option>
+                            <option>Approved</option>
+                            <option>Implemented</option>
+                            <option>Rejected</option>
+                        </select>
+                        <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                            <option>All Technologies</option>
+                            <option>Kubernetes</option>
+                            <option>AWS</option>
+                            <option>OAuth 2.0</option>
+                        </select>
+                        <div className="flex items-center gap-2 ml-auto">
+                            <span className="text-sm text-gray-400">Sort by:</span>
+                            <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                                <option>Most Recent</option>
+                                <option>Oldest First</option>
+                                <option>Highest Confidence</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Decision Cards */}
+                    <div className="grid gap-4">
+                        {decisions.map((decision) => (
+                            <div key={decision.id} className="decision-card rounded-lg p-6">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-semibold text-white">{decision.title}</h3>
+                                        <p className="mt-1 text-sm text-gray-400">{decision.date}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {decision.confidence && (
+                                            <span className="confidence-badge rounded-full px-2 py-1 text-xs">
+                                                {decision.confidence}% confidence
+                                            </span>
+                                        )}
+                                        <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium capitalize ${getStatusColor(decision.status)}`}>
+                                            {decision.status}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <p className="text-sm text-gray-300 mb-4">{decision.summary}</p>
+
+                                <div className="flex items-center gap-4 text-sm">
+                                    <div>
+                                        <span className="text-gray-500">Technologies: </span>
+                                        <span className="text-gray-300">
+                                            {decision.technologies.map((tech, idx) => (
+                                                <span key={idx} className="inline-flex items-center rounded bg-gray-700 px-2 py-1 text-xs mr-1">
+                                                    {tech}
+                                                </span>
+                                            ))}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="mt-3 flex items-center gap-2 text-sm text-gray-400">
+                                    <Icons.Users />
+                                    <span>{decision.stakeholders.join(', ')}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // Categories Page - EAM Feature
+        function Categories({ setCurrentPage, setSelectedCategory }) {
+            const categories = [
+                {
+                    name: 'SAP S/4HANA',
+                    id: 'SAP_S4HANA',
+                    decisions: 15,
+                    openQuestions: 7,
+                    escalations: 3,
+                    lastActivity: '2 hours ago',
+                    status: 'high-risk',
+                    description: 'S/4HANA migration program and architectural decisions'
+                },
+                {
+                    name: 'Integration Architecture',
+                    id: 'Integration',
+                    decisions: 23,
+                    openQuestions: 4,
+                    escalations: 1,
+                    lastActivity: '5 hours ago',
+                    status: 'active',
+                    description: 'Enterprise integration patterns, CPI, and middleware decisions'
+                },
+                {
+                    name: 'Data Architecture',
+                    id: 'Data',
+                    decisions: 12,
+                    openQuestions: 2,
+                    escalations: 0,
+                    lastActivity: '1 day ago',
+                    status: 'healthy',
+                    description: 'Data governance, MDM, analytics, and data lake architecture'
+                },
+                {
+                    name: 'Security & Compliance',
+                    id: 'Security',
+                    decisions: 18,
+                    openQuestions: 5,
+                    escalations: 2,
+                    lastActivity: '3 hours ago',
+                    status: 'active',
+                    description: 'Security architecture, compliance requirements, and authentication'
+                },
+                {
+                    name: 'Cloud Strategy',
+                    id: 'Cloud',
+                    decisions: 9,
+                    openQuestions: 3,
+                    escalations: 0,
+                    lastActivity: '2 days ago',
+                    status: 'healthy',
+                    description: 'Cloud migration, AWS/Azure decisions, and cloud-native architecture'
+                }
+            ];
+
+            return (
+                <div className="space-y-6">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">Architecture Categories</h1>
+                        <p className="mt-1 text-gray-400">Domain-focused architectural activity and governance</p>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="stat-card rounded-lg border border-gray-700 p-4 text-center">
+                            <div className="text-3xl font-bold text-white">77</div>
+                            <div className="text-sm text-gray-400 mt-1">Total Decisions</div>
+                        </div>
+                        <div className="stat-card rounded-lg border border-gray-700 p-4 text-center">
+                            <div className="text-3xl font-bold text-yellow-400">21</div>
+                            <div className="text-sm text-gray-400 mt-1">Open Questions</div>
+                        </div>
+                        <div className="stat-card rounded-lg border border-gray-700 p-4 text-center">
+                            <div className="text-3xl font-bold text-red-400">6</div>
+                            <div className="text-sm text-gray-400 mt-1">Active Escalations</div>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-4">
+                        {categories.map((category) => (
+                            <div
+                                key={category.id}
+                                onClick={() => {
+                                    setSelectedCategory(category);
+                                    setCurrentPage('category-detail');
+                                }}
+                                className="decision-card rounded-lg p-6 cursor-pointer"
+                            >
+                                <div className="flex items-start justify-between mb-3">
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-semibold text-white">{category.name}</h3>
+                                        <p className="text-sm text-gray-400 mt-1">{category.description}</p>
+                                    </div>
+                                    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${
+                                        category.status === 'high-risk' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                        category.status === 'active' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                                        'bg-green-500/10 text-green-400 border-green-500/20'
+                                    }`}>
+                                        {category.status === 'high-risk' ? `${category.escalations} risks` :
+                                         category.status === 'active' ? 'Active' : 'Aligned'}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                        <span className="text-gray-500">Decisions</span>
+                                        <p className="font-semibold text-white mt-1">{category.decisions}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">Questions</span>
+                                        <p className="font-semibold text-white mt-1">{category.openQuestions}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">Escalations</span>
+                                        <p className="font-semibold text-accent-500 mt-1">{category.escalations}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">Last Activity</span>
+                                        <p className="font-semibold text-white mt-1">{category.lastActivity}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // Category Detail Page - EAM Feature
+        function CategoryDetail({ category, setCurrentPage, setSelectedDecision }) {
+            const decisions = [
+                {
+                    id: 'DEC-2026-047',
+                    title: 'S/4HANA migration timeline conflict',
+                    type: 'ESCALATE',
+                    confidence: 92,
+                    summary: 'Finance requires Q3 2026 go-live for regulatory compliance (IFRS 17), but IT estimates Q4 2026 based on current resource allocation.',
+                    date: 'Jan 27, 2026 14:23',
+                    evidenceCount: 8,
+                    meeting: 'FY26 SAP Planning Session'
+                },
+                {
+                    id: 'DEC-2026-046',
+                    title: 'Fiori app architecture pattern deviation',
+                    type: 'CLARIFY',
+                    confidence: 88,
+                    summary: 'Team proposing custom UI5 components instead of standard Fiori elements.',
+                    date: 'Jan 27, 2026 11:15',
+                    evidenceCount: 5,
+                    meeting: 'SAP Fiori Development Review'
+                },
+                {
+                    id: 'DEC-2026-045',
+                    title: 'S/4HANA embedded analytics confirmed',
+                    type: 'RESPOND',
+                    confidence: 94,
+                    summary: 'Proposed SAP Analytics Cloud with embedded BW/4HANA aligns with enterprise principles.',
+                    date: 'Jan 26, 2026 16:45',
+                    evidenceCount: 6,
+                    meeting: 'BI/Analytics Architecture Review'
+                }
+            ];
+
+            return (
+                <div className="space-y-6">
+                    <div>
+                        <button
+                            onClick={() => setCurrentPage('categories')}
+                            className="flex items-center gap-2 text-accent-500 hover:text-accent-300 mb-4"
+                        >
+                            <Icons.ChevronLeft />
+                            Back to Categories
+                        </button>
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold text-white">{category.name}</h1>
+                                <p className="mt-1 text-gray-400">{category.description}</p>
+                            </div>
+                            <span className="inline-flex items-center rounded-full bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-2 text-base font-medium">
+                                {category.escalations} Active Risks
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="stat-card rounded-lg border border-gray-700 p-4 text-center">
+                            <div className="text-3xl font-bold text-blue-400">{category.decisions}</div>
+                            <div className="text-sm text-gray-400 mt-1">Total Decisions</div>
+                        </div>
+                        <div className="stat-card rounded-lg border border-gray-700 p-4 text-center">
+                            <div className="text-3xl font-bold text-yellow-400">{category.openQuestions}</div>
+                            <div className="text-sm text-gray-400 mt-1">Open Questions</div>
+                        </div>
+                        <div className="stat-card rounded-lg border border-gray-700 p-4 text-center">
+                            <div className="text-3xl font-bold text-red-400">{category.escalations}</div>
+                            <div className="text-sm text-gray-400 mt-1">Escalations</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-4">Recent Activity</h2>
+                        <div className="space-y-4">
+                            {decisions.map((decision) => (
+                                <div
+                                    key={decision.id}
+                                    onClick={() => {
+                                        setSelectedDecision(decision);
+                                        setCurrentPage('decision-detail');
+                                    }}
+                                    className={`decision-card rounded-lg p-6 cursor-pointer border-l-4 ${
+                                        decision.type === 'ESCALATE' ? 'border-red-500' :
+                                        decision.type === 'CLARIFY' ? 'border-yellow-500' :
+                                        'border-green-500'
+                                    }`}
+                                >
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="flex-1">
+                                            <h3 className="font-medium text-white">{decision.title}</h3>
+                                            <p className="text-xs text-gray-500 mt-1">{decision.meeting}</p>
+                                        </div>
+                                        <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${
+                                            decision.type === 'ESCALATE' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                            decision.type === 'CLARIFY' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                                            'bg-green-500/10 text-green-400 border-green-500/20'
+                                        }`}>
+                                            {decision.type}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-gray-300 mb-3">{decision.summary}</p>
+                                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                                        <span>📅 {decision.date}</span>
+                                        <span>🔍 Confidence: {decision.confidence}%</span>
+                                        <span>📊 Evidence: {decision.evidenceCount} segments</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Decision Detail with Evidence Window - EAM Feature
+        function DecisionDetail({ decision, setCurrentPage }) {
+            const transcriptLines = [
+                { speaker: 'Sarah Chen (CFO)', time: '[00:12:34]', content: 'We need to discuss the S/4HANA go-live date. From Finance\'s perspective, we have a hard deadline.', highlighted: false },
+                { speaker: 'Sarah Chen', time: '[00:12:41]', content: 'IFRS 17 goes into effect January 1st, 2027. We need the new system operational in Q3 2026 to allow time for year-end close testing and auditor sign-off.', highlighted: true },
+                { speaker: 'Sarah Chen', time: '[00:12:58]', content: 'This isn\'t negotiable - if we miss this, we face regulatory penalties and potential audit qualifications.', highlighted: true },
+                { speaker: 'James Rodriguez (CIO)', time: '[00:13:15]', content: 'I understand the regulatory pressure, but we need to be realistic about what\'s achievable.', highlighted: false },
+                { speaker: 'James Rodriguez', time: '[00:13:22]', content: 'Based on our current resource plan and the testing requirements we discussed last month, IT is estimating Q4 2026 for production go-live.', highlighted: true },
+                { speaker: 'James Rodriguez', time: '[00:13:35]', content: 'We\'re already running two other major initiatives - the CRM replacement and the cybersecurity remediation project.', highlighted: true },
+                { speaker: 'Sarah Chen', time: '[00:13:48]', content: 'Can we bring in external consultants to accelerate?', highlighted: false },
+                { speaker: 'James Rodriguez', time: '[00:13:52]', content: 'Potentially, but that would require additional budget approval and there\'s a ramp-up time. We\'d still be looking at late Q3 at the earliest.', highlighted: true }
+            ];
+
+            return (
+                <div className="space-y-6">
+                    <div>
+                        <button
+                            onClick={() => setCurrentPage('decisions')}
+                            className="flex items-center gap-2 text-accent-500 hover:text-accent-300 mb-4"
+                        >
+                            <Icons.ChevronLeft />
+                            Back to Decisions
+                        </button>
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <h1 className="text-2xl font-bold text-white">Decision {decision?.id || 'DEC-2026-047'}</h1>
+                                <p className="text-gray-400 mt-1">SAP S/4HANA Migration Timeline Conflict</p>
+                            </div>
+                            <span className="inline-flex items-center rounded-full bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-2 text-lg font-medium">ESCALATE</span>
+                        </div>
+                    </div>
+
+                    <div className="stat-card rounded-lg border border-gray-700 p-4">
+                        <div className="grid grid-cols-5 gap-4 text-sm">
+                            <div>
+                                <div className="text-gray-500 mb-1">Category</div>
+                                <div className="font-semibold text-white">SAP_S4HANA</div>
+                            </div>
+                            <div>
+                                <div className="text-gray-500 mb-1">Confidence</div>
+                                <div className="font-semibold text-green-400">92%</div>
+                            </div>
+                            <div>
+                                <div className="text-gray-500 mb-1">Evidence Score</div>
+                                <div className="font-semibold text-blue-400">8 segments</div>
+                            </div>
+                            <div>
+                                <div className="text-gray-500 mb-1">Timestamp</div>
+                                <div className="font-semibold text-white">Jan 27, 14:23</div>
+                            </div>
+                            <div>
+                                <div className="text-gray-500 mb-1">Meeting</div>
+                                <div className="font-semibold text-accent-500 cursor-pointer hover:text-accent-300">FY26 SAP Planning</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                        {/* Left: What ArqEye Did */}
+                        <div className="decision-card rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-white mb-4">What ArqEye Did</h3>
+                            
+                            <div className="mb-6">
+                                <div className="text-sm font-medium text-gray-400 mb-2">Summary</div>
+                                <p className="text-gray-300">Finance and IT stakeholders have conflicting timelines for SAP S/4HANA go-live. Finance requires Q3 2026 for IFRS 17 regulatory compliance, while IT estimates Q4 2026 based on current resource allocation and testing requirements.</p>
+                            </div>
+
+                            <div className="mb-6">
+                                <div className="text-sm font-medium text-gray-400 mb-2">Action Taken</div>
+                                <div className="p-3 bg-red-500/10 border-l-4 border-red-500 rounded">
+                                    <div className="font-semibold text-red-400">ESCALATE</div>
+                                    <p className="text-sm text-gray-300 mt-1">Critical timeline conflict requiring executive decision</p>
+                                </div>
+                            </div>
+
+                            <div className="mb-6">
+                                <div className="text-sm font-medium text-gray-400 mb-2">Reason Code</div>
+                                <code className="text-xs bg-gray-700 p-2 rounded block text-accent-500 font-mono">CONFLICTING_STAKEHOLDER_REQUIREMENTS</code>
+                                <p className="text-xs text-gray-400 mt-2">Two departments with valid but incompatible constraints. Requires senior leadership arbitration.</p>
+                            </div>
+
+                            <div className="mb-6">
+                                <div className="text-sm font-medium text-gray-400 mb-2">Why ArqEye Spoke</div>
+                                <ul className="text-sm text-gray-300 space-y-2">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span>High confidence (92%) based on explicit timeline statements</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span>Regulatory deadline (IFRS 17) is non-negotiable</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span>Resource constraint validated against project portfolio</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span>No attendee acknowledged the conflict - requires intervention</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <div className="text-sm font-medium text-gray-400 mb-2">Recommended Actions</div>
+                                <ol className="text-sm text-gray-300 space-y-2 list-decimal list-inside">
+                                    <li>Escalate to CFO + CIO for joint decision</li>
+                                    <li>Evaluate accelerated migration options</li>
+                                    <li>Assess regulatory penalty risk vs. quality trade-offs</li>
+                                    <li>Document decision rationale for audit trail</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        {/* Right: Evidence Window */}
+                        <div className="decision-card rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-white mb-4">Evidence</h3>
+                            
+                            <div className="mb-3">
+                                <div className="text-sm font-medium text-gray-400 mb-2">Transcript Window</div>
+                                <div className="text-xs text-gray-500 mb-3">Meeting: FY26 SAP Planning Session | Jan 27, 2026</div>
+                                
+                                <div className="bg-gray-900 rounded-lg p-4 max-h-[500px] overflow-y-auto scrollbar-thin font-mono text-xs border border-gray-700">
+                                    {transcriptLines.map((line, idx) => (
+                                        <div key={idx} className={`transcript-line py-2 border-l-3 pl-3 ${line.highlighted ? 'bg-accent-500/10 border-l-accent-500' : 'border-l-transparent'}`}>
+                                            <div className="text-xs text-gray-500">{line.time} <span className="text-accent-500">{line.speaker}</span></div>
+                                            <div className="text-sm text-gray-200 mt-1">{line.content}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mt-4">
+                                <div className="text-sm font-medium text-gray-400 mb-2">Referenced Entities</div>
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="inline-flex items-center rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 text-xs cursor-pointer hover:bg-blue-500/20">SAP S/4HANA</span>
+                                    <span className="inline-flex items-center rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 text-xs cursor-pointer hover:bg-blue-500/20">IFRS 17 Compliance</span>
+                                    <span className="inline-flex items-center rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 text-xs cursor-pointer hover:bg-blue-500/20">CRM Replacement</span>
+                                    <span className="inline-flex items-center rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 text-xs cursor-pointer hover:bg-blue-500/20">Cybersecurity Remediation</span>
+                                </div>
+                            </div>
+
+                            <div className="mt-4">
+                                <div className="text-sm font-medium text-gray-400 mb-2">Participants</div>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center text-purple-400 text-xs font-semibold">SC</div>
+                                        <div>
+                                            <div className="font-medium text-white">Sarah Chen</div>
+                                            <div className="text-xs text-gray-500">Chief Financial Officer</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center text-blue-400 text-xs font-semibold">JR</div>
+                                        <div>
+                                            <div className="font-medium text-white">James Rodriguez</div>
+                                            <div className="text-xs text-gray-500">Chief Information Officer</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Interfaces Page - EAM Feature  
+        function Interfaces() {
+            const interfaces = [
+                { id: 'IF-CRM-001', name: 'Customer Master Sync', source: 'SAP S/4HANA', target: 'Salesforce', type: 'OData API', frequency: 'Real-time', technology: 'SAP CPI', status: 'active', mentions: 12 },
+                { id: 'IF-ORD-002', name: 'Sales Order Creation', source: 'Salesforce', target: 'SAP S/4HANA', type: 'REST API', frequency: 'Real-time', technology: 'SAP CPI', status: 'active', mentions: 8 },
+                { id: 'IF-HR-003', name: 'Employee Data Feed', source: 'SuccessFactors', target: 'SAP S/4HANA', type: 'File (SFTP)', frequency: 'Daily', technology: 'SAP CPI', status: 'active', mentions: 15 },
+                { id: 'IF-PRD-004', name: 'Product Catalogue Sync', source: 'SAP S/4HANA', target: 'Salesforce', type: 'Event (Kafka)', frequency: 'Real-time', technology: 'AWS EventBridge', status: 'active', mentions: 19 },
+                { id: 'IF-FIN-005', name: 'Financial Reporting Extract', source: 'SAP S/4HANA', target: 'SAP Analytics Cloud', type: 'OData API', frequency: 'Hourly', technology: 'Direct OData', status: 'active', mentions: 7 }
+            ];
+
+            return (
+                <div className="space-y-6">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">Interface Catalogue</h1>
+                        <p className="mt-1 text-gray-400">Integration architecture and data flows</p>
+                    </div>
+
+                    <div className="decision-card rounded-lg p-4">
+                        <div className="grid grid-cols-4 gap-4">
+                            <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                                <option>All Sources</option>
+                                <option>SAP S/4HANA</option>
+                                <option>Salesforce</option>
+                            </select>
+                            <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                                <option>All Targets</option>
+                                <option>SAP S/4HANA</option>
+                                <option>Salesforce</option>
+                            </select>
+                            <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                                <option>All Types</option>
+                                <option>API (REST/OData)</option>
+                                <option>File Transfer</option>
+                            </select>
+                            <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                                <option>All Frequencies</option>
+                                <option>Real-time</option>
+                                <option>Hourly</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="decision-card rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-800 border-b border-gray-700">
+                                    <tr>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Interface</th>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Source → Target</th>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Type</th>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Frequency</th>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Technology</th>
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Evidence</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-700">
+                                    {interfaces.map((iface) => (
+                                        <tr key={iface.id} className="hover:bg-gray-700/30 cursor-pointer transition-colors">
+                                            <td className="py-3 px-4">
+                                                <div className="font-medium text-white text-sm">{iface.name}</div>
+                                                <div className="text-xs text-gray-500">{iface.id}</div>
+                                            </td>
+                                            <td className="py-3 px-4 text-sm text-gray-300">{iface.source} → {iface.target}</td>
+                                            <td className="py-3 px-4">
+                                                <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-medium ${
+                                                    iface.type.includes('API') ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                                    iface.type.includes('File') ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                                    'bg-accent-500/10 text-accent-400 border-accent-500/20'
+                                                }`}>
+                                                    {iface.type}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-4 text-sm text-gray-300">{iface.frequency}</td>
+                                            <td className="py-3 px-4 text-sm text-gray-300">{iface.technology}</td>
+                                            <td className="py-3 px-4">
+                                                <span className="text-accent-500 hover:text-accent-300 cursor-pointer text-sm">{iface.mentions} mentions</span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Landscape Diagram - EAM Feature
+        function Landscape() {
+            return (
+                <div className="space-y-6">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">Application Landscape</h1>
+                        <p className="mt-1 text-gray-400">Interactive architecture diagram with meeting evidence overlay</p>
+                    </div>
+
+                    <div className="decision-card rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex gap-4">
+                                <button className="px-4 py-2 rounded-lg border-b-2 border-accent-500 text-accent-500 font-semibold text-sm">All Systems</button>
+                                <button className="px-4 py-2 text-gray-400 hover:text-white text-sm">SAP S/4HANA Domain</button>
+                                <button className="px-4 py-2 text-gray-400 hover:text-white text-sm">Integration Layer</button>
+                                <button className="px-4 py-2 text-gray-400 hover:text-white text-sm">Meeting Overlay</button>
+                            </div>
+                            <div className="flex gap-3 text-xs">
+                                <div className="flex items-center gap-1">
+                                    <div className="w-4 h-3 border-2 border-primary-500 bg-gray-800 rounded"></div>
+                                    <span className="text-gray-400">Active</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <div className="w-4 h-3 border-2 border-accent-500 bg-accent-500/10 rounded"></div>
+                                    <span className="text-gray-400">Mentioned in Meetings</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <div className="w-4 h-3 border-2 border-red-500 bg-gray-800 rounded"></div>
+                                    <span className="text-gray-400">Phase Out</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="decision-card rounded-lg p-4">
+                        <div className="relative bg-gray-800 border border-gray-700 rounded-lg p-6" style={{minHeight: '600px'}}>
+                            {/* Node Components */}
+                            <div className="absolute bg-gray-800 border-2 border-accent-500 rounded-lg p-3 text-center shadow-lg hover:shadow-xl transition-all cursor-pointer" style={{top: '20px', left: '50%', transform: 'translateX(-50%)', minWidth: '160px', backgroundColor: 'rgba(0, 212, 170, 0.05)'}}>
+                                <div className="font-semibold text-sm text-white">Salesforce Sales Cloud</div>
+                                <div className="text-xs text-gray-500">CRM</div>
+                            </div>
+
+                            <div className="absolute bg-gray-800 border-2 border-accent-500 rounded-lg p-3 text-center shadow-lg hover:shadow-xl transition-all cursor-pointer" style={{top: '140px', left: '50%', transform: 'translateX(-50%)', minWidth: '200px', backgroundColor: 'rgba(0, 212, 170, 0.05)'}}>
+                                <div className="font-semibold text-sm text-white">SAP Cloud Platform Integration</div>
+                                <div className="text-xs text-gray-500">iPaaS</div>
+                            </div>
+
+                            <div className="absolute bg-gray-800 border-2 border-accent-500 rounded-lg p-3 text-center shadow-lg hover:shadow-xl transition-all cursor-pointer" style={{top: '260px', left: '30%', transform: 'translateX(-50%)', minWidth: '160px', backgroundColor: 'rgba(0, 212, 170, 0.05)'}}>
+                                <div className="font-semibold text-sm text-white">SAP S/4HANA</div>
+                                <div className="text-xs text-gray-500 mb-1">ERP (Phase In)</div>
+                                <div className="text-xs text-yellow-400">🔄 23 decisions</div>
+                            </div>
+
+                            <div className="absolute bg-gray-800 border-2 border-red-500 rounded-lg p-3 text-center shadow-lg hover:shadow-xl transition-all cursor-pointer opacity-70" style={{top: '260px', left: '70%', transform: 'translateX(-50%)', minWidth: '160px'}}>
+                                <div className="font-semibold text-sm text-white">SAP ECC 6.0</div>
+                                <div className="text-xs text-gray-500">Legacy ERP</div>
+                                <div className="text-xs text-red-400">⚠️ Phase Out</div>
+                            </div>
+
+                            <div className="absolute bg-gray-800 border-2 border-accent-500 rounded-lg p-3 text-center shadow-lg hover:shadow-xl transition-all cursor-pointer" style={{top: '380px', left: '20%', transform: 'translateX(-50%)', minWidth: '160px', backgroundColor: 'rgba(0, 212, 170, 0.05)'}}>
+                                <div className="font-semibold text-sm text-white">Informatica MDM</div>
+                                <div className="text-xs text-gray-500">Master Data</div>
+                            </div>
+
+                            <div className="absolute bg-gray-800 border-2 border-accent-500 rounded-lg p-3 text-center shadow-lg hover:shadow-xl transition-all cursor-pointer" style={{top: '380px', left: '50%', transform: 'translateX(-50%)', minWidth: '180px', backgroundColor: 'rgba(0, 212, 170, 0.05)'}}>
+                                <div className="font-semibold text-sm text-white">SAP Analytics Cloud</div>
+                                <div className="text-xs text-gray-500">Analytics</div>
+                            </div>
+
+                            <div className="absolute bg-gray-800 border-2 border-accent-500 rounded-lg p-3 text-center shadow-lg hover:shadow-xl transition-all cursor-pointer" style={{top: '140px', left: '80%', transform: 'translateX(-50%)', minWidth: '180px', backgroundColor: 'rgba(0, 212, 170, 0.05)'}}>
+                                <div className="font-semibold text-sm text-white">SAP SuccessFactors</div>
+                                <div className="text-xs text-gray-500">HCM</div>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 p-4 bg-accent-500/10 border-l-4 border-accent-500 rounded">
+                            <div className="font-semibold text-accent-500 mb-2">💡 Meeting Evidence Overlay</div>
+                            <p className="text-sm text-gray-300">Systems highlighted in green were discussed in recent meetings. Click any node to view related decisions and transcript references.</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Audit Trail / Silence Page - EAM Feature
+        function AuditTrail() {
+            const silenceEvents = [
+                { id: 1, meeting: 'SAP Security Configuration Workshop', date: 'Jan 26, 2026 10:00 - 11:30', reason: 'NO_TRIGGER', description: 'Discussion focused on SAP authorization roles, GRC configuration, and user access provisioning. No architectural decisions or enterprise policy conflicts detected.', segmentsAnalyzed: 45, policyMatches: 0 },
+                { id: 2, meeting: 'Weekly Team Standup - SAP Migration', date: 'Jan 24, 2026 09:00 - 09:30', reason: 'OPERATIONAL_SCOPE', description: 'Status update meeting covering sprint progress, individual task assignments, and blockers. No strategic decisions or architectural direction changes discussed.', segmentsAnalyzed: 28, policyMatches: 0 },
+                { id: 3, meeting: 'Cloud Cost Optimization Discussion', date: 'Jan 23, 2026 15:00 - 15:45', reason: 'INSUFFICIENT_EVIDENCE', confidence: 42, description: 'Team discussed moving certain workloads from AWS to Azure for cost savings. While architecturally relevant, confidence threshold not met.', segmentsAnalyzed: 18, policyMatches: 2 }
+            ];
+
+            return (
+                <div className="space-y-6">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">Silence & Audit Trail</h1>
+                        <p className="mt-1 text-gray-400">When ArqEye chose not to speak and why</p>
+                    </div>
+
+                    <div className="p-4 bg-blue-500/10 border-l-4 border-blue-500 rounded-lg">
+                        <div className="font-semibold text-blue-400 mb-2">💡 Why This Matters</div>
+                        <p className="text-sm text-gray-300">ArqEye's silence is as valuable as its responses. This view proves ArqEye doesn't hallucinate or interrupt unnecessarily - it only speaks when evidence supports intervention.</p>
+                    </div>
+
+                    <div className="decision-card rounded-lg p-4">
+                        <div className="grid grid-cols-3 gap-4">
+                            <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                                <option>All Reasons</option>
+                                <option>NO_TRIGGER</option>
+                                <option>INSUFFICIENT_EVIDENCE</option>
+                                <option>OPERATIONAL_SCOPE</option>
+                            </select>
+                            <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                                <option>All Categories</option>
+                                <option>SAP_S4HANA</option>
+                                <option>Integration</option>
+                            </select>
+                            <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                                <option>Last 7 days</option>
+                                <option>Last 30 days</option>
+                                <option>Last 90 days</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {silenceEvents.map((event) => (
+                            <div key={event.id} className="decision-card rounded-lg p-6 border-l-4 border-gray-600">
+                                <div className="flex items-start justify-between mb-3">
+                                    <div>
+                                        <h3 className="font-semibold text-white">{event.meeting}</h3>
+                                        <div className="text-sm text-gray-500 mt-1">{event.date}</div>
+                                    </div>
+                                    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${
+                                        event.reason === 'INSUFFICIENT_EVIDENCE' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-gray-600/10 text-gray-400 border-gray-600/20'
+                                    }`}>
+                                        SILENCE: {event.reason}
+                                    </span>
+                                </div>
+                                <div className="mb-3">
+                                    <div className="text-sm font-medium text-gray-400 mb-1">Reason</div>
+                                    <p className="text-sm text-gray-300">{event.description}</p>
+                                </div>
+                                <div className="mb-3">
+                                    <div className="text-sm font-medium text-gray-400 mb-1">Evaluation Details</div>
+                                    <div className="grid grid-cols-3 gap-4 text-sm">
+                                        <div>
+                                            <span className="text-gray-500">Confidence:</span>
+                                            <span className="font-semibold ml-2 text-white">{event.confidence ? `${event.confidence}%` : 'N/A'}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">Segments:</span>
+                                            <span className="font-semibold ml-2 text-white">{event.segmentsAnalyzed}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">Matches:</span>
+                                            <span className="font-semibold ml-2 text-white">{event.policyMatches}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="stat-card rounded-lg border border-gray-700 p-6">
+                        <h3 className="font-semibold text-white mb-4">Silence Statistics (Last 30 Days)</h3>
+                        <div className="grid grid-cols-4 gap-6 text-center">
+                            <div>
+                                <div className="text-3xl font-bold text-gray-300">127</div>
+                                <div className="text-sm text-gray-500 mt-1">Total Silence Events</div>
+                            </div>
+                            <div>
+                                <div className="text-3xl font-bold text-blue-400">89</div>
+                                <div className="text-sm text-gray-500 mt-1">NO_TRIGGER</div>
+                                <div className="text-xs text-gray-600">70%</div>
+                            </div>
+                            <div>
+                                <div className="text-3xl font-bold text-yellow-400">24</div>
+                                <div className="text-sm text-gray-500 mt-1">INSUFFICIENT_EVIDENCE</div>
+                                <div className="text-xs text-gray-600">19%</div>
+                            </div>
+                            <div>
+                                <div className="text-3xl font-bold text-gray-500">14</div>
+                                <div className="text-sm text-gray-500 mt-1">OPERATIONAL_SCOPE</div>
+                                <div className="text-xs text-gray-600">11%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Main App Component
+        function App() {
+            const [sidebarOpen, setSidebarOpen] = useState(true);
+            const [currentPage, setCurrentPage] = useState('dashboard');
+            const [selectedMeeting, setSelectedMeeting] = useState(null);
+            const [selectedCategory, setSelectedCategory] = useState(null);
+            const [selectedDecision, setSelectedDecision] = useState(null);
+
+            return (
+                <div className="flex min-h-screen">
+                    <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} sidebarOpen={sidebarOpen} />
+                    
+                    <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-60' : 'ml-20'}`}>
+                        <TopBar />
+                        
+                        <main className="p-8">
+                            {currentPage === 'dashboard' && <Dashboard />}
+                            {currentPage === 'meetings' && <Meetings setCurrentPage={setCurrentPage} setSelectedMeeting={setSelectedMeeting} />}
+                            {currentPage === 'meeting-detail' && selectedMeeting && (
+                                <MeetingDetail meeting={selectedMeeting} setCurrentPage={setCurrentPage} />
+                            )}
+                            {currentPage === 'decisions' && <Decisions />}
+                            {currentPage === 'categories' && <Categories setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} />}
+                            {currentPage === 'category-detail' && selectedCategory && <CategoryDetail category={selectedCategory} setCurrentPage={setCurrentPage} setSelectedDecision={setSelectedDecision} />}
+                            {currentPage === 'decision-detail' && <DecisionDetail decision={selectedDecision} setCurrentPage={setCurrentPage} />}
+                            {currentPage === 'interfaces' && <Interfaces />}
+                            {currentPage === 'landscape' && <Landscape />}
+                            {currentPage === 'audit' && <AuditTrail />}
+                            {currentPage === 'settings' && <ArqEyeSettings />}
+                            {currentPage === 'analytics' && (
+                                <div className="space-y-6">
+                                    <div>
+                                        <h1 className="text-3xl font-bold text-white">Analytics Dashboard</h1>
+                                        <p className="mt-1 text-gray-400">Track ARQEYE performance and team engagement metrics</p>
+                                    </div>
+
+                                    {/* Key Metrics */}
+                                    <div className="grid grid-cols-4 gap-4">
+                                        {[
+                                            { label: 'Total Meetings', value: '47', change: '+12%', positive: true },
+                                            { label: 'ARQEYE Interventions', value: '128', change: '+8%', positive: true },
+                                            { label: 'Avg Confidence', value: '87%', change: '+3%', positive: true },
+                                            { label: 'Decision Velocity', value: '5.2/week', change: 'No change', neutral: true }
+                                        ].map((metric, idx) => (
+                                            <div key={idx} className="stat-card rounded-lg border border-gray-700 p-5">
+                                                <div className="text-sm font-medium text-gray-400">{metric.label}</div>
+                                                <div className="mt-2 text-3xl font-bold text-white">{metric.value}</div>
+                                                <div className={`mt-1 text-xs ${metric.positive ? 'text-green-400' : metric.neutral ? 'text-gray-400' : 'text-red-400'}`}>
+                                                    {metric.change} vs last month
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* ARQEYE Performance Over Time */}
+                                    <div className="rounded-lg bg-gray-800 border border-gray-700 p-6">
+                                        <h3 className="text-lg font-semibold text-white mb-4">ARQEYE Intervention Trends</h3>
+                                        <div className="space-y-3">
+                                            {[
+                                                { month: 'September', interventions: 45, confidence: 82 },
+                                                { month: 'October', interventions: 67, confidence: 85 },
+                                                { month: 'November', interventions: 89, confidence: 86 },
+                                                { month: 'December', interventions: 128, confidence: 87 }
+                                            ].map((data, idx) => (
+                                                <div key={idx}>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-sm font-medium text-white">{data.month}</span>
+                                                        <div className="flex items-center gap-4">
+                                                            <span className="text-sm text-gray-400">{data.interventions} interventions</span>
+                                                            <span className="confidence-badge rounded-full px-2 py-0.5 text-xs">
+                                                                {data.confidence}% avg confidence
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="relative h-8 bg-gray-700 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className="absolute inset-y-0 left-0 bg-gradient-to-r from-accent-500 to-accent-300 transition-all"
+                                                            style={{ width: `${(data.interventions / 150) * 100}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Decision Breakdown */}
+                                        <div className="rounded-lg bg-gray-800 border border-gray-700 p-6">
+                                            <h3 className="text-lg font-semibold text-white mb-4">Decision Status Breakdown</h3>
+                                            <div className="space-y-4">
+                                                {[
+                                                    { status: 'Approved', count: 24, percentage: 71, color: 'bg-green-500' },
+                                                    { status: 'Proposed', count: 7, percentage: 21, color: 'bg-blue-500' },
+                                                    { status: 'Rejected', count: 3, percentage: 8, color: 'bg-red-500' }
+                                                ].map((item, idx) => (
+                                                    <div key={idx}>
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-sm text-white">{item.status}</span>
+                                                            <span className="text-sm text-gray-400">{item.count} decisions ({item.percentage}%)</span>
+                                                        </div>
+                                                        <div className="relative h-3 bg-gray-700 rounded-full overflow-hidden">
+                                                            <div 
+                                                                className={`absolute inset-y-0 left-0 ${item.color} transition-all`}
+                                                                style={{ width: `${item.percentage}%` }}
+                                                            ></div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Top Contributors */}
+                                        <div className="rounded-lg bg-gray-800 border border-gray-700 p-6">
+                                            <h3 className="text-lg font-semibold text-white mb-4">Most Active Contributors</h3>
+                                            <div className="space-y-3">
+                                                {[
+                                                    { name: 'Sarah Chen', contributions: 34, isBot: false },
+                                                    { name: 'Marcus Johnson', contributions: 28, isBot: false },
+                                                    { name: 'ARQEYE', contributions: 21, isBot: true },
+                                                    { name: 'David Lee', contributions: 19, isBot: false },
+                                                    { name: 'Jennifer Williams', contributions: 16, isBot: false }
+                                                ].map((contributor, idx) => (
+                                                    <div key={idx} className="flex items-center gap-3">
+                                                        <div className="text-lg font-bold text-gray-500 w-6">{idx + 1}</div>
+                                                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                                                            contributor.isBot ? 'bg-accent-500 text-gray-900' : 'bg-primary-500 text-white'
+                                                        }`}>
+                                                            {contributor.isBot ? '🤖' : contributor.name.split(' ').map(n => n[0]).join('')}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="text-sm font-medium text-white">{contributor.name}</div>
+                                                        </div>
+                                                        <div className="text-lg font-bold text-accent-500">{contributor.contributions}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Architectural Domains Coverage */}
+                                    <div className="rounded-lg bg-gray-800 border border-gray-700 p-6">
+                                        <h3 className="text-lg font-semibold text-white mb-4">Architectural Domain Coverage</h3>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            {[
+                                                { domain: 'Application Layer', discussions: 23, percentage: 85 },
+                                                { domain: 'Infrastructure', discussions: 19, percentage: 70 },
+                                                { domain: 'Integration', discussions: 15, percentage: 55 },
+                                                { domain: 'Security', discussions: 12, percentage: 44 },
+                                                { domain: 'Data Architecture', discussions: 10, percentage: 37 },
+                                                { domain: 'Deployment', discussions: 8, percentage: 29 }
+                                            ].map((item, idx) => (
+                                                <div key={idx} className="rounded-lg bg-gray-900/50 p-4">
+                                                    <div className="text-sm font-medium text-white mb-2">{item.domain}</div>
+                                                    <div className="text-2xl font-bold text-accent-500 mb-1">{item.discussions}</div>
+                                                    <div className="text-xs text-gray-400 mb-3">discussions this month</div>
+                                                    <div className="relative h-2 bg-gray-700 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className="absolute inset-y-0 left-0 bg-accent-500 transition-all"
+                                                            style={{ width: `${item.percentage}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {currentPage === 'applications' && (
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h1 className="text-3xl font-bold text-white">Application Inventory</h1>
+                                            <p className="mt-1 text-gray-400">Track all applications in your architecture</p>
+                                        </div>
+                                        <button className="rounded-lg bg-accent-500 px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-accent-300">
+                                            + Add Application
+                                        </button>
+                                    </div>
+
+                                    {/* Filters */}
+                                    <div className="flex items-center gap-4">
+                                        <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                                            <option>All Status</option>
+                                            <option>Active</option>
+                                            <option>Deprecated</option>
+                                            <option>In Development</option>
+                                        </select>
+                                        <select className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none">
+                                            <option>All Technologies</option>
+                                            <option>React</option>
+                                            <option>Node.js</option>
+                                            <option>Python</option>
+                                            <option>Java</option>
+                                        </select>
+                                        <div className="flex-1"></div>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                placeholder="Search applications..."
+                                                className="rounded-lg border border-gray-600 bg-gray-700 px-4 py-2 pl-10 text-sm text-white placeholder-gray-400 focus:border-accent-500 focus:outline-none w-80"
+                                            />
+                                            <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2" />
+                                        </div>
+                                    </div>
+
+                                    {/* Application Cards */}
+                                    <div className="grid gap-4">
+                                        {[
+                                            {
+                                                name: 'PaymentCore',
+                                                description: 'Core payment processing system handling transactions and settlements',
+                                                status: 'active',
+                                                technology: ['Java', 'Spring Boot', 'PostgreSQL'],
+                                                owner: 'Sarah Chen',
+                                                dependencies: 3,
+                                                lastDiscussed: '2 days ago',
+                                                decisions: 5
+                                            },
+                                            {
+                                                name: 'CustomerPortal',
+                                                description: 'Customer-facing web application for account management',
+                                                status: 'active',
+                                                technology: ['React', 'Node.js', 'MongoDB'],
+                                                owner: 'Marcus Johnson',
+                                                dependencies: 2,
+                                                lastDiscussed: '5 days ago',
+                                                decisions: 3
+                                            },
+                                            {
+                                                name: 'NotificationService',
+                                                description: 'Microservice handling email, SMS, and push notifications',
+                                                status: 'active',
+                                                technology: ['Python', 'FastAPI', 'Redis'],
+                                                owner: 'David Lee',
+                                                dependencies: 4,
+                                                lastDiscussed: '1 week ago',
+                                                decisions: 2
+                                            },
+                                            {
+                                                name: 'AnalyticsPlatform',
+                                                description: 'Real-time analytics and reporting dashboard',
+                                                status: 'in-development',
+                                                technology: ['React', 'Python', 'BigQuery'],
+                                                owner: 'Jennifer Williams',
+                                                dependencies: 1,
+                                                lastDiscussed: '3 days ago',
+                                                decisions: 4
+                                            },
+                                            {
+                                                name: 'LegacyBilling',
+                                                description: 'Legacy billing system scheduled for migration',
+                                                status: 'deprecated',
+                                                technology: ['PHP', 'MySQL'],
+                                                owner: 'Alex Kumar',
+                                                dependencies: 6,
+                                                lastDiscussed: '2 weeks ago',
+                                                decisions: 1
+                                            }
+                                        ].map((app, idx) => (
+                                            <div key={idx} className="decision-card rounded-lg p-6">
+                                                <div className="flex items-start justify-between mb-4">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <h3 className="text-lg font-semibold text-white">{app.name}</h3>
+                                                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium capitalize ${
+                                                                app.status === 'active' 
+                                                                    ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                                                    : app.status === 'deprecated'
+                                                                        ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                                                        : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                                            }`}>
+                                                                {app.status}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-300">{app.description}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-6 text-sm mb-4">
+                                                    <div>
+                                                        <span className="text-gray-500">Technology: </span>
+                                                        <span className="text-gray-300">
+                                                            {app.technology.map((tech, i) => (
+                                                                <span key={i} className="inline-flex items-center rounded bg-gray-700 px-2 py-1 text-xs mr-1">
+                                                                    {tech}
+                                                                </span>
+                                                            ))}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-4 gap-4 pt-4 border-t border-gray-700">
+                                                    <div>
+                                                        <div className="text-xs text-gray-500">Owner</div>
+                                                        <div className="text-sm font-medium text-white mt-1">{app.owner}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-gray-500">Dependencies</div>
+                                                        <div className="text-sm font-medium text-white mt-1">{app.dependencies} apps</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-gray-500">Decisions</div>
+                                                        <div className="text-sm font-medium text-accent-500 mt-1">{app.decisions} tracked</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-gray-500">Last Discussed</div>
+                                                        <div className="text-sm font-medium text-white mt-1">{app.lastDiscussed}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </main>
+                    </div>
+                </div>
+            );
+        }
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
