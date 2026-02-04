@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArqEye - Your Architecture Intelligence</title>
+    <title>ArqEye - Enterprise Architecture Intelligence</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -644,20 +644,20 @@
                         {/* Ask ArqEye Button */}
                         <button 
                             onClick={() => setAskArqEyeOpen(!askArqEyeOpen)}
-                            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
                                 askArqEyeOpen 
                                     ? 'bg-accent-500 text-gray-900' 
                                     : 'bg-accent-500/10 border border-accent-500/30 text-accent-400 hover:bg-accent-500/20 hover:text-accent-300'
                             }`}
                         >
-                            <svg width="64" height="64" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="20" y="10" width="60" height="22" rx="2" fill="white"/>
-    <rect x="14" y="38" width="72" height="18" rx="2" fill="white"/>
-    <rect x="14" y="62" width="33" height="24" rx="2" fill="white"/>
-    <rect x="53" y="62" width="33" height="24" rx="2" fill="white"/>
-    <rect x="14" y="86" width="33" height="6" rx="1" fill="#00d4aa"/>
-    <rect x="53" y="86" width="33" height="6" rx="1" fill="#00d4aa"/>
-</svg>
+                            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 100 100" fill="none">
+                                <rect x="20" y="10" width="60" height="22" rx="2" fill="currentColor"/>
+                                <rect x="14" y="38" width="72" height="18" rx="2" fill="currentColor"/>
+                                <rect x="14" y="62" width="33" height="24" rx="2" fill="currentColor"/>
+                                <rect x="53" y="62" width="33" height="24" rx="2" fill="currentColor"/>
+                                <rect x="14" y="86" width="33" height="6" rx="1" fill="#00d4aa"/>
+                                <rect x="53" y="86" width="33" height="6" rx="1" fill="#00d4aa"/>
+                            </svg>
                             Ask ArqEye
                         </button>
                         {/* Notifications Dropdown */}
@@ -756,7 +756,7 @@
                         
                         {/* Company Name */}
                         <div className="text-sm font-medium text-gray-300">
-                            Model Company
+                            TechCorp Industries
                         </div>
                         
                         <div className="h-8 w-px bg-gray-700"></div>
@@ -850,15 +850,9 @@
                         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700 bg-gray-800">
                             <div className="flex items-center gap-3">
                                 <div className="h-9 w-9 rounded-lg bg-accent-500/20 flex items-center justify-center">
-                                    <svg className="h-8 w-8 flex-shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect width="100" height="100" rx="10" fill="#0a0a0a"/>
-                                    <rect x="20" y="10" width="60" height="22" rx="2" fill="white"/>
-                                    <rect x="14" y="38" width="72" height="18" rx="2" fill="white"/>
-                                    <rect x="14" y="62" width="33" height="24" rx="2" fill="white"/>
-                                    <rect x="53" y="62" width="33" height="24" rx="2" fill="white"/>
-                                    <rect x="14" y="86" width="33" height="6" rx="1" fill="#00d4aa"/>
-                                    <rect x="53" y="86" width="33" height="6" rx="1" fill="#00d4aa"/>
-                                </svg>
+                                    <svg className="w-5 h-5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                    </svg>
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-bold text-white">Ask ArqEye</h3>
@@ -891,7 +885,7 @@
                                             <div className="flex items-center gap-1.5 mb-2">
                                                 <span className="text-accent-400 font-bold text-xs">ArqEye</span>
                                                 <span className="text-gray-600 text-xs">•</span>
-                                                <span className="text-gray-500 text-xs">Your Architecture Intelligence</span>
+                                                <span className="text-gray-500 text-xs">Architecture Intelligence</span>
                                             </div>
                                         )}
                                         {msg.text}
@@ -1338,7 +1332,7 @@
                     tenant_id: generateUUID(),
                     meeting_id: generateUUID(),
                     meeting_url: meetingUrl,
-                    bot_name: 'ArqEye'
+                    bot_name: 'ArqEye Bot'
                 };
 
                 console.log('ArqEye: Sending request to meeting service...', payload);
@@ -3395,11 +3389,12 @@
                             {/* Header with explanation */}
                             <div className="bg-gradient-to-r from-accent-500/10 to-primary-500/10 border border-accent-500/20 rounded-lg p-4 mb-6">
                                 <div className="flex items-start gap-3">
-                                    
+                                    <div className="text-accent-500 text-2xl">🧠</div>
                                     <div>
-                                        <h3 className="text-sm font-semibold text-white mb-1">ARQEYE automatically identifies concerns, alignment issues, hidden assumptions, and action gaps from meeting discussions - things that would otherwise be lost in transcripts.
-</h3>
-                                        
+                                        <h3 className="text-sm font-semibold text-white mb-1">AI-Powered Meeting Intelligence</h3>
+                                        <p className="text-xs text-gray-300">
+                                            ARQEYE automatically identifies concerns, alignment issues, hidden assumptions, and action gaps from meeting discussions - things that would otherwise be lost in transcripts.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
